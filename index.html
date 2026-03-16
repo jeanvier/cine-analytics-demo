@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cinébulletin — Analytics Dashboard</title>
+  <link rel="icon" href="https://cinebulletin.ch/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-50: #EFFDF5; --green-100: #D9FBE8; --green-200: #B3F5D1;
+      --green-300: #75EDAE; --green-400: #00DC82; --green-500: #00C16A;
+      --green-600: #00A155; --green-700: #007F45; --green-800: #016538;
+      --green-900: #0A5331; --green-950: #052E16;
+
+      --gray-50: #FAFAFA; --gray-100: #F4F4F5; --gray-200: #E4E4E7;
+      --gray-300: #D4D4D8; --gray-400: #A1A1AA; --gray-500: #71717A;
+      --gray-600: #52525B; --gray-700: #3F3F46; --gray-800: #27272A;
+      --gray-850: #1F1F23; --gray-900: #18181B; --gray-950: #09090B;
+
+      --blue-400: #60A5FA; --blue-500: #3B82F6; --blue-600: #2563EB;
+      --yellow-400: #FACC15; --yellow-500: #EAB308;
+      --red-400: #F87171; --red-500: #EF4444;
+      --purple-400: #C084FC; --purple-500: #A855F7;
+      --cyan-400: #22D3EE; --cyan-500: #06B6D4;
+      --orange-400: #FB923C; --orange-500: #F97316;
+
+      --bg-root: var(--gray-950);
+      --bg-sidebar: var(--gray-900);
+      --bg-panel: var(--gray-900);
+      --bg-card: var(--gray-850);
+      --bg-elevated: var(--gray-800);
+      --bg-input: var(--gray-800);
+      --border: var(--gray-800);
+      --border-subtle: var(--gray-850);
+      --text-primary: var(--gray-50);
+      --text-secondary: var(--gray-400);
+      --text-muted: var(--gray-500);
+      --primary: var(--green-400);
+      --primary-hover: var(--green-300);
+      --radius: 8px;
+      --radius-lg: 12px;
+      --sidebar-width: 260px;
+      --transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html { font-size: 14px; }
+    body {
+      font-family: 'Public Sans', system-ui, -apple-system, sans-serif;
+      background: var(--bg-root);
+      color: var(--text-primary);
+      line-height: 1.5;
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--gray-700); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gray-600); }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar-width);
+      min-height: 100vh;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 50;
+      transition: transform var(--transition);
+    }
+    .sidebar-header {
+      padding: 16px 16px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo { height: 28px; filter: brightness(0) invert(1); }
+    .sidebar-brand { font-weight: 600; font-size: 15px; color: var(--text-primary); }
+
+    .sidebar-search {
+      margin: 12px 12px 4px;
+      padding: 7px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-muted);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: border-color var(--transition);
+    }
+    .sidebar-search:hover { border-color: var(--gray-600); }
+    .sidebar-search kbd {
+      margin-left: auto;
+      font-size: 11px;
+      padding: 1px 5px;
+      background: var(--gray-700);
+      border-radius: 4px;
+      font-family: inherit;
+      color: var(--text-muted);
+    }
+
+    .sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+    .nav-section { padding: 4px 12px; }
+    .nav-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      padding: 12px 12px 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      position: relative;
+    }
+    .nav-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .nav-item.active {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 16px;
+      background: var(--primary);
+      border-radius: 0 2px 2px 0;
+    }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+    .nav-item.active svg { opacity: 1; }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--primary);
+      color: var(--green-950);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 10px;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--green-500), var(--blue-500));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      flex-shrink: 0;
+    }
+    .sidebar-user { flex: 1; min-width: 0; }
+    .sidebar-user-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .sidebar-user-email { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Main ── */
+    .main {
+      margin-left: var(--sidebar-width);
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Navbar ── */
+    .navbar {
+      height: 49px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 12px;
+      background: var(--bg-panel);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .navbar-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .navbar-actions { display: flex; align-items: center; gap: 6px; }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-panel);
+      flex-wrap: wrap;
+    }
+    .toolbar-tabs { display: flex; gap: 2px; background: var(--bg-elevated); border-radius: var(--radius); padding: 3px; }
+    .toolbar-tab {
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition);
+      border: none;
+      background: none;
+    }
+    .toolbar-tab:hover { color: var(--text-primary); }
+    .toolbar-tab.active { background: var(--bg-panel); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+
+    .toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all var(--transition);
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .btn svg { width: 15px; height: 15px; }
+    .btn-primary { background: var(--primary); color: var(--green-950); border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-ghost { background: transparent; color: var(--text-secondary); }
+    .btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .btn-outline { background: transparent; border-color: var(--border); color: var(--text-secondary); }
+    .btn-outline:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--gray-600); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-icon { padding: 7px; }
+
+    .date-range {
+      padding: 7px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: border-color var(--transition);
+    }
+    .date-range:hover { border-color: var(--gray-600); }
+    .date-range svg { width: 14px; height: 14px; }
+
+    /* ── Content ── */
+    .content { padding: 24px; flex: 1; overflow-y: auto; }
+
+    /* ── Grid ── */
+    .grid { display: grid; gap: 16px; }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-1-2 { grid-template-columns: 1fr 2fr; }
+    .grid-2-1 { grid-template-columns: 2fr 1fr; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title { font-size: 14px; font-weight: 600; }
+    .card-body { padding: 20px; }
+    .card-body.compact { padding: 0; }
+
+    /* ── Stat Cards ── */
+    .stat-card { padding: 20px; }
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-label .source-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .stat-change {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .stat-change.up { background: rgba(0, 220, 130, 0.12); color: var(--green-400); }
+    .stat-change.down { background: rgba(248, 113, 113, 0.12); color: var(--red-400); }
+    .stat-change svg { width: 12px; height: 12px; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-green { background: rgba(0, 220, 130, 0.12); color: var(--green-400); }
+    .badge-blue { background: rgba(96, 165, 250, 0.12); color: var(--blue-400); }
+    .badge-yellow { background: rgba(250, 204, 21, 0.12); color: var(--yellow-400); }
+    .badge-red { background: rgba(248, 113, 113, 0.12); color: var(--red-400); }
+    .badge-purple { background: rgba(192, 132, 252, 0.12); color: var(--purple-400); }
+    .badge-cyan { background: rgba(34, 211, 238, 0.12); color: var(--cyan-400); }
+    .badge-orange { background: rgba(251, 146, 60, 0.12); color: var(--orange-400); }
+    .badge-gray { background: var(--bg-elevated); color: var(--text-secondary); }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 12px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr { transition: background var(--transition); }
+    tbody tr:hover { background: var(--bg-elevated); }
+    td .cell-primary { color: var(--text-primary); font-weight: 500; }
+
+    /* ── Chart containers ── */
+    .chart-container { position: relative; width: 100%; }
+    .chart-container canvas { width: 100% !important; }
+    .chart-legend { display: flex; gap: 16px; padding: 12px 20px; border-top: 1px solid var(--border); }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* ── Section spacing ── */
+    .section { margin-bottom: 24px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title img { height: 18px; }
+
+    /* ── Source indicators ── */
+    .source-umami { background: var(--cyan-400); }
+    .source-meta { background: var(--blue-400); }
+    .source-mailchimp { background: var(--yellow-400); }
+
+    /* ── Export dropdown ── */
+    .dropdown { position: relative; }
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 4px);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+      min-width: 180px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.4);
+      z-index: 100;
+    }
+    .dropdown.open .dropdown-menu { display: block; }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all var(--transition);
+      border: none;
+      background: none;
+      width: 100%;
+      font-family: inherit;
+    }
+    .dropdown-item:hover { background: var(--bg-elevated); color: var(--text-primary); }
+    .dropdown-item svg { width: 15px; height: 15px; opacity: 0.6; }
+    .dropdown-sep { height: 1px; background: var(--border); margin: 4px 0; }
+
+    /* ── Sparkline ── */
+    .sparkline-row { display: flex; align-items: center; gap: 12px; }
+    .sparkline-row canvas { flex-shrink: 0; }
+
+    /* ── Toast notification ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      font-size: 13px;
+      color: var(--text-primary);
+      box-shadow: 0 8px 30px rgba(0,0,0,.4);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 300ms ease;
+      z-index: 200;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast svg { width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1200px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .grid-3, .grid-2, .grid-1-2, .grid-2-1 { grid-template-columns: 1fr; }
+      .mobile-toggle { display: flex !important; }
+    }
+    .mobile-toggle { display: none; }
+
+    /* ── Animations ── */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in { animation: fadeInUp 400ms ease forwards; opacity: 0; }
+    .delay-1 { animation-delay: 50ms; }
+    .delay-2 { animation-delay: 100ms; }
+    .delay-3 { animation-delay: 150ms; }
+    .delay-4 { animation-delay: 200ms; }
+    .delay-5 { animation-delay: 250ms; }
+    .delay-6 { animation-delay: 300ms; }
+    .delay-7 { animation-delay: 350ms; }
+    .delay-8 { animation-delay: 400ms; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ Sidebar ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <img src="https://cinebulletin.ch/img/cb-logo.svg" alt="Cinébulletin" class="sidebar-logo">
+      <span class="sidebar-brand">Analytics</span>
+    </div>
+
+    <div class="sidebar-search" onclick="showToast('Recherche bientôt disponible')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      Rechercher...
+      <kbd>⌘K</kbd>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <a class="nav-item active" href="#">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+          Dashboard
+        </a>
+        <a class="nav-item" href="#" onclick="showToast('Section Audience')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Audience
+          <span class="nav-badge">3.2k</span>
+        </a>
+        <a class="nav-item" href="#" onclick="showToast('Section Campagnes')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Campagnes
+        </a>
+        <a class="nav-item" href="#" onclick="showToast('Section Publicités')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+          Publicités
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-label">Sources</div>
+        <a class="nav-item" href="#" onclick="showToast('Vue Umami')">
+          <span class="source-dot source-umami"></span>
+          Umami (Web)
+        </a>
+        <a class="nav-item" href="#" onclick="showToast('Vue Meta')">
+          <span class="source-dot source-meta"></span>
+          Meta (Social)
+        </a>
+        <a class="nav-item" href="#" onclick="showToast('Vue Mailchimp')">
+          <span class="source-dot source-mailchimp"></span>
+          Mailchimp (Email)
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <div class="nav-label">Paramètres</div>
+        <a class="nav-item" href="#" onclick="showToast('Paramètres généraux')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          Général
+        </a>
+        <a class="nav-item" href="#" onclick="showToast('Connexions API')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Connexions API
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-avatar">CB</div>
+      <div class="sidebar-user">
+        <div class="sidebar-user-name">Cinébulletin</div>
+        <div class="sidebar-user-email">admin@cinebulletin.ch</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ Main Content ═══ -->
+  <div class="main">
+    <!-- Navbar -->
+    <header class="navbar">
+      <button class="btn btn-icon btn-ghost mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+      </button>
+      <span class="navbar-title">Vue d'ensemble</span>
+      <div class="navbar-actions">
+        <button class="btn btn-ghost btn-icon" onclick="showToast('Notifications activées')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        </button>
+        <button class="btn btn-ghost btn-icon" onclick="showToast('Aide et support')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-tabs">
+        <button class="toolbar-tab active">Consolidé</button>
+        <button class="toolbar-tab" onclick="showToast('Vue Web sélectionnée')">Web</button>
+        <button class="toolbar-tab" onclick="showToast('Vue Social sélectionnée')">Social</button>
+        <button class="toolbar-tab" onclick="showToast('Vue Email sélectionnée')">Email</button>
+      </div>
+      <div class="toolbar-right">
+        <div class="date-range" onclick="showToast('Sélection de dates')">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+          2 mars 2026 – 16 mars 2026
+        </div>
+        <div class="dropdown" id="exportDropdown">
+          <button class="btn btn-outline" onclick="toggleDropdown()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Exporter
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="dropdown-menu">
+            <button class="dropdown-item" onclick="showToast('Export PDF en cours...'); closeDropdown()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14,2 14,8 20,8"/></svg>
+              Rapport PDF
+            </button>
+            <button class="dropdown-item" onclick="showToast('Export CSV en cours...'); closeDropdown()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 12H8"/><path d="M16 17H8"/><path d="M16 12h-2"/></svg>
+              Données CSV
+            </button>
+            <button class="dropdown-item" onclick="showToast('Export Excel en cours...'); closeDropdown()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+              Classeur Excel
+            </button>
+            <div class="dropdown-sep"></div>
+            <button class="dropdown-item" onclick="showToast('Lien partageable copié !'); closeDropdown()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Lien partageable
+            </button>
+            <button class="dropdown-item" onclick="showToast('Envoi par email programmé'); closeDropdown()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Envoyer par email
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ═══ KPI Cards ═══ -->
+      <div class="section">
+        <div class="grid grid-4">
+          <!-- Visiteurs -->
+          <div class="card animate-in delay-1">
+            <div class="stat-card">
+              <div class="stat-label"><span class="source-dot source-umami"></span> Visiteurs uniques</div>
+              <div class="stat-value">14'832</div>
+              <span class="stat-change up">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                +12.4%
+              </span>
+            </div>
+          </div>
+          <!-- Portée Social -->
+          <div class="card animate-in delay-2">
+            <div class="stat-card">
+              <div class="stat-label"><span class="source-dot source-meta"></span> Portée totale</div>
+              <div class="stat-value">87'540</div>
+              <span class="stat-change up">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                +8.2%
+              </span>
+            </div>
+          </div>
+          <!-- Abonnés Email -->
+          <div class="card animate-in delay-3">
+            <div class="stat-card">
+              <div class="stat-label"><span class="source-dot source-mailchimp"></span> Abonnés actifs</div>
+              <div class="stat-value">3'218</div>
+              <span class="stat-change up">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                +3.1%
+              </span>
+            </div>
+          </div>
+          <!-- Engagement global -->
+          <div class="card animate-in delay-4">
+            <div class="stat-card">
+              <div class="stat-label">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+                Engagement global
+              </div>
+              <div class="stat-value">6.8%</div>
+              <span class="stat-change down">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                -0.4%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Main Charts ═══ -->
+      <div class="section">
+        <div class="grid grid-2">
+          <!-- Traffic Chart -->
+          <div class="card animate-in delay-5">
+            <div class="card-header">
+              <span class="card-title">Trafic multi-sources</span>
+              <button class="btn btn-ghost btn-sm" onclick="showToast('Détails du trafic')">Détails →</button>
+            </div>
+            <div class="card-body">
+              <div class="chart-container" style="height: 260px;">
+                <canvas id="trafficChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><span class="legend-dot" style="background:var(--cyan-400)"></span> Umami</div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--blue-400)"></span> Meta</div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--yellow-400)"></span> Mailchimp</div>
+            </div>
+          </div>
+
+          <!-- Engagement Chart -->
+          <div class="card animate-in delay-6">
+            <div class="card-header">
+              <span class="card-title">Taux d'engagement</span>
+              <div style="display:flex;gap:6px;">
+                <span class="badge badge-cyan">Web 4.2%</span>
+                <span class="badge badge-blue">Social 2.1%</span>
+                <span class="badge badge-yellow">Email 38.6%</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="chart-container" style="height: 260px;">
+                <canvas id="engagementChart"></canvas>
+              </div>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><span class="legend-dot" style="background:var(--cyan-400)"></span> Taux rebond (inv.)</div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--blue-400)"></span> Interactions</div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--yellow-400)"></span> Taux ouverture</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Secondary Row ═══ -->
+      <div class="section">
+        <div class="grid grid-3">
+          <!-- Top pages -->
+          <div class="card animate-in delay-6">
+            <div class="card-header">
+              <span class="card-title">Pages populaires</span>
+              <span class="badge badge-cyan">Umami</span>
+            </div>
+            <div class="card-body compact">
+              <table>
+                <thead>
+                  <tr><th>Page</th><th style="text-align:right">Vues</th><th style="text-align:right">Rebond</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><span class="cell-primary">/critique/emilia-perez</span></td><td style="text-align:right">2'340</td><td style="text-align:right"><span class="badge badge-green">32%</span></td></tr>
+                  <tr><td><span class="cell-primary">/actualites/oscar-2026</span></td><td style="text-align:right">1'876</td><td style="text-align:right"><span class="badge badge-green">28%</span></td></tr>
+                  <tr><td><span class="cell-primary">/festival/locarno-2026</span></td><td style="text-align:right">1'543</td><td style="text-align:right"><span class="badge badge-yellow">45%</span></td></tr>
+                  <tr><td><span class="cell-primary">/interview/ursula-meier</span></td><td style="text-align:right">1'201</td><td style="text-align:right"><span class="badge badge-green">36%</span></td></tr>
+                  <tr><td><span class="cell-primary">/dossier/cinema-suisse</span></td><td style="text-align:right">987</td><td style="text-align:right"><span class="badge badge-red">58%</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Meta Posts -->
+          <div class="card animate-in delay-7">
+            <div class="card-header">
+              <span class="card-title">Posts performants</span>
+              <span class="badge badge-blue">Meta</span>
+            </div>
+            <div class="card-body compact">
+              <table>
+                <thead>
+                  <tr><th>Post</th><th style="text-align:right">Portée</th><th style="text-align:right">Eng.</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><span class="cell-primary">Oscars 2026 — Palmarès</span></td><td style="text-align:right">24'500</td><td style="text-align:right"><span class="badge badge-green">4.8%</span></td></tr>
+                  <tr><td><span class="cell-primary">Reel — Coulisses FIFF</span></td><td style="text-align:right">18'230</td><td style="text-align:right"><span class="badge badge-green">6.2%</span></td></tr>
+                  <tr><td><span class="cell-primary">Critique — Anora</span></td><td style="text-align:right">12'890</td><td style="text-align:right"><span class="badge badge-yellow">2.1%</span></td></tr>
+                  <tr><td><span class="cell-primary">Story — Quiz cinéma</span></td><td style="text-align:right">9'670</td><td style="text-align:right"><span class="badge badge-green">8.4%</span></td></tr>
+                  <tr><td><span class="cell-primary">Carrousel — Top 10 CH</span></td><td style="text-align:right">7'450</td><td style="text-align:right"><span class="badge badge-green">3.7%</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mailchimp Campaigns -->
+          <div class="card animate-in delay-8">
+            <div class="card-header">
+              <span class="card-title">Dernières campagnes</span>
+              <span class="badge badge-yellow">Mailchimp</span>
+            </div>
+            <div class="card-body compact">
+              <table>
+                <thead>
+                  <tr><th>Campagne</th><th style="text-align:right">Ouvert</th><th style="text-align:right">Clics</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><span class="cell-primary">Newsletter #142</span></td><td style="text-align:right"><span class="badge badge-green">42.3%</span></td><td style="text-align:right"><span class="badge badge-green">8.1%</span></td></tr>
+                  <tr><td><span class="cell-primary">Spécial Oscars</span></td><td style="text-align:right"><span class="badge badge-green">56.7%</span></td><td style="text-align:right"><span class="badge badge-green">12.4%</span></td></tr>
+                  <tr><td><span class="cell-primary">Newsletter #141</span></td><td style="text-align:right"><span class="badge badge-green">38.9%</span></td><td style="text-align:right"><span class="badge badge-yellow">5.2%</span></td></tr>
+                  <tr><td><span class="cell-primary">Offre abonnement</span></td><td style="text-align:right"><span class="badge badge-yellow">31.2%</span></td><td style="text-align:right"><span class="badge badge-red">2.8%</span></td></tr>
+                  <tr><td><span class="cell-primary">Newsletter #140</span></td><td style="text-align:right"><span class="badge badge-green">40.1%</span></td><td style="text-align:right"><span class="badge badge-yellow">6.7%</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Audience Breakdown ═══ -->
+      <div class="section">
+        <div class="grid grid-2-1">
+          <!-- Combined Table -->
+          <div class="card animate-in delay-7">
+            <div class="card-header">
+              <span class="card-title">Activité récente consolidée</span>
+              <button class="btn btn-ghost btn-sm" onclick="showToast('Export de la table')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                CSV
+              </button>
+            </div>
+            <div class="card-body compact">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Source</th>
+                      <th>Événement</th>
+                      <th style="text-align:right">Valeur</th>
+                      <th>Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>16 mars</td>
+                      <td><span class="badge badge-cyan">Umami</span></td>
+                      <td><span class="cell-primary">Pic de trafic organique</span></td>
+                      <td style="text-align:right">+340 visites</td>
+                      <td><span class="badge badge-green">En cours</span></td>
+                    </tr>
+                    <tr>
+                      <td>15 mars</td>
+                      <td><span class="badge badge-blue">Meta</span></td>
+                      <td><span class="cell-primary">Campagne "Oscars" terminée</span></td>
+                      <td style="text-align:right">CHF 245.00</td>
+                      <td><span class="badge badge-green">Complété</span></td>
+                    </tr>
+                    <tr>
+                      <td>14 mars</td>
+                      <td><span class="badge badge-yellow">Mailchimp</span></td>
+                      <td><span class="cell-primary">Newsletter #142 envoyée</span></td>
+                      <td style="text-align:right">3'180 envois</td>
+                      <td><span class="badge badge-green">Livré</span></td>
+                    </tr>
+                    <tr>
+                      <td>13 mars</td>
+                      <td><span class="badge badge-blue">Meta</span></td>
+                      <td><span class="cell-primary">Boost post FIFF</span></td>
+                      <td style="text-align:right">CHF 50.00</td>
+                      <td><span class="badge badge-purple">Actif</span></td>
+                    </tr>
+                    <tr>
+                      <td>12 mars</td>
+                      <td><span class="badge badge-cyan">Umami</span></td>
+                      <td><span class="cell-primary">Nouveau record sessions</span></td>
+                      <td style="text-align:right">1'247 sessions</td>
+                      <td><span class="badge badge-gray">Archivé</span></td>
+                    </tr>
+                    <tr>
+                      <td>11 mars</td>
+                      <td><span class="badge badge-yellow">Mailchimp</span></td>
+                      <td><span class="cell-primary">Automation bienvenue</span></td>
+                      <td style="text-align:right">28 nouveaux</td>
+                      <td><span class="badge badge-green">Actif</span></td>
+                    </tr>
+                    <tr>
+                      <td>10 mars</td>
+                      <td><span class="badge badge-blue">Meta</span></td>
+                      <td><span class="cell-primary">Reel viral — 5k vues</span></td>
+                      <td style="text-align:right">5'120 vues</td>
+                      <td><span class="badge badge-orange">Viral</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audience Donut -->
+          <div class="card animate-in delay-8">
+            <div class="card-header">
+              <span class="card-title">Répartition audience</span>
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <div class="chart-container" style="height: 220px; max-width: 220px;">
+                <canvas id="audienceChart"></canvas>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;width:100%;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius);">
+                  <div class="legend-item"><span class="legend-dot" style="background:var(--cyan-400)"></span> Suisse romande</div>
+                  <span style="font-weight:600;font-size:13px;">62%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius);">
+                  <div class="legend-item"><span class="legend-dot" style="background:var(--blue-400)"></span> France</div>
+                  <span style="font-weight:600;font-size:13px;">21%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius);">
+                  <div class="legend-item"><span class="legend-dot" style="background:var(--purple-400)"></span> Suisse alémanique</div>
+                  <span style="font-weight:600;font-size:13px;">11%</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg-elevated);border-radius:var(--radius);">
+                  <div class="legend-item"><span class="legend-dot" style="background:var(--gray-400)"></span> Autres</div>
+                  <span style="font-weight:600;font-size:13px;">6%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <span id="toastMsg"></span>
+  </div>
+
+  <script>
+    // ── Chart.js defaults ──
+    Chart.defaults.color = '#A1A1AA';
+    Chart.defaults.borderColor = 'rgba(63, 63, 70, 0.5)';
+    Chart.defaults.font.family = "'Public Sans', sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.plugins.legend.display = false;
+    Chart.defaults.responsive = true;
+    Chart.defaults.maintainAspectRatio = false;
+
+    const days = ['2 mar','3','4','5','6','7','8','9','10','11','12','13','14','15','16'];
+
+    // ── Traffic Chart ──
+    new Chart(document.getElementById('trafficChart'), {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [
+          {
+            label: 'Umami',
+            data: [820, 930, 1100, 980, 1250, 1180, 890, 760, 1340, 1150, 1420, 1380, 1510, 1290, 1650],
+            borderColor: '#22D3EE',
+            backgroundColor: 'rgba(34, 211, 238, 0.08)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+          },
+          {
+            label: 'Meta',
+            data: [3200, 3800, 4500, 5200, 4800, 6100, 5700, 5300, 7200, 6800, 7500, 8100, 7900, 6200, 8400],
+            borderColor: '#60A5FA',
+            backgroundColor: 'rgba(96, 165, 250, 0.06)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+          },
+          {
+            label: 'Mailchimp',
+            data: [0, 0, 420, 0, 0, 0, 380, 0, 0, 510, 0, 0, 0, 470, 0],
+            borderColor: '#FACC15',
+            backgroundColor: 'rgba(250, 204, 21, 0.08)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: function(ctx) { return ctx.raw > 0 ? 4 : 0; },
+            pointBackgroundColor: '#FACC15',
+          }
+        ]
+      },
+      options: {
+        interaction: { intersect: false, mode: 'index' },
+        scales: {
+          x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+          y: { grid: { color: 'rgba(63,63,70,0.3)' }, ticks: { maxTicksLimit: 5 }, beginAtZero: true }
+        },
+        plugins: {
+          tooltip: {
+            backgroundColor: '#27272A',
+            borderColor: '#3F3F46',
+            borderWidth: 1,
+            titleColor: '#FAFAFA',
+            bodyColor: '#A1A1AA',
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: true,
+            boxPadding: 4
+          }
+        }
+      }
+    });
+
+    // ── Engagement Chart ──
+    new Chart(document.getElementById('engagementChart'), {
+      type: 'bar',
+      data: {
+        labels: days,
+        datasets: [
+          {
+            label: 'Taux rebond (inv.)',
+            data: [68, 65, 62, 70, 58, 61, 72, 74, 56, 60, 55, 57, 54, 63, 52],
+            backgroundColor: 'rgba(34, 211, 238, 0.25)',
+            borderColor: '#22D3EE',
+            borderWidth: 1,
+            borderRadius: 4,
+            barPercentage: 0.6,
+          },
+          {
+            label: 'Interactions',
+            data: [120, 145, 210, 280, 230, 340, 310, 270, 420, 380, 440, 510, 480, 350, 520],
+            backgroundColor: 'rgba(96, 165, 250, 0.25)',
+            borderColor: '#60A5FA',
+            borderWidth: 1,
+            borderRadius: 4,
+            barPercentage: 0.6,
+          },
+          {
+            label: 'Taux ouverture',
+            data: [0, 0, 42, 0, 0, 0, 39, 0, 0, 45, 0, 0, 0, 41, 0],
+            backgroundColor: 'rgba(250, 204, 21, 0.3)',
+            borderColor: '#FACC15',
+            borderWidth: 1,
+            borderRadius: 4,
+            barPercentage: 0.6,
+          }
+        ]
+      },
+      options: {
+        interaction: { intersect: false, mode: 'index' },
+        scales: {
+          x: { grid: { display: false }, stacked: false, ticks: { maxTicksLimit: 8 } },
+          y: { grid: { color: 'rgba(63,63,70,0.3)' }, ticks: { maxTicksLimit: 5 }, beginAtZero: true }
+        },
+        plugins: {
+          tooltip: {
+            backgroundColor: '#27272A',
+            borderColor: '#3F3F46',
+            borderWidth: 1,
+            titleColor: '#FAFAFA',
+            bodyColor: '#A1A1AA',
+            padding: 12,
+            cornerRadius: 8,
+            displayColors: true,
+            boxPadding: 4
+          }
+        }
+      }
+    });
+
+    // ── Audience Donut ──
+    new Chart(document.getElementById('audienceChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Suisse romande', 'France', 'Suisse alémanique', 'Autres'],
+        datasets: [{
+          data: [62, 21, 11, 6],
+          backgroundColor: ['#22D3EE', '#60A5FA', '#C084FC', '#71717A'],
+          borderColor: '#18181B',
+          borderWidth: 3,
+          hoverBorderColor: '#27272A',
+        }]
+      },
+      options: {
+        cutout: '68%',
+        plugins: {
+          tooltip: {
+            backgroundColor: '#27272A',
+            borderColor: '#3F3F46',
+            borderWidth: 1,
+            titleColor: '#FAFAFA',
+            bodyColor: '#A1A1AA',
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.raw}%` }
+          }
+        }
+      }
+    });
+
+    // ── Dropdown ──
+    function toggleDropdown() {
+      document.getElementById('exportDropdown').classList.toggle('open');
+    }
+    function closeDropdown() {
+      document.getElementById('exportDropdown').classList.remove('open');
+    }
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown')) closeDropdown();
+    });
+
+    // ── Toast ──
+    let toastTimeout;
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // ── Tab switching ──
+    document.querySelectorAll('.toolbar-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.toolbar-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
